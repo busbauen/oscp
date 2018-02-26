@@ -8,12 +8,14 @@ import fileinput
 import atexit
 import sys
 import socket
+from ipdb import set_trace
 
 # Todo:
 # Add mysql nmap-script
 # Change replace to sed:
 # sed 's|literal_pattern|replacement_string|g'
 
+full_scan = None
 start = time.time()
 
 class bcolors:
@@ -68,8 +70,8 @@ def connect_to_port(ip_address, port, service):
 
 def write_to_file(ip_address, enum_type, data):
 
-    file_path_linux = '/root/oscp/exam/%s/mapping-linux.md' % (ip_address)
-    file_path_windows = '/root/oscp/exam/%s/mapping-windows.md' % (ip_address)
+    file_path_linux = '/opt/oscp/exam/%s/mapping-linux.md' % (ip_address)
+    file_path_windows = '/opt/oscp/exam/%s/mapping-windows.md' % (ip_address)
     paths = [file_path_linux, file_path_windows]
     print bcolors.OKGREEN + "INFO: Writing " + enum_type + " to template files:\n " + file_path_linux + "   \n" + file_path_windows + bcolors.ENDC
 
@@ -96,7 +98,7 @@ def write_to_file(ip_address, enum_type, data):
 
 def dirb(ip_address, port, url_start):
     print bcolors.HEADER + "INFO: Starting dirb scan for " + ip_address + bcolors.ENDC
-    DIRBSCAN = "dirb %s://%s:%s -o /root/oscp/exam/%s/dirb-%s.txt -r" % (url_start, ip_address, port, ip_address, ip_address)
+    DIRBSCAN = "dirb %s://%s:%s -o /opt/oscp/exam/%s/dirb-%s.txt -r" % (url_start, ip_address, port, ip_address, ip_address)
     print bcolors.HEADER + DIRBSCAN + bcolors.ENDC
     results_dirb = subprocess.check_output(DIRBSCAN, shell=True)
     print bcolors.OKGREEN + "INFO: RESULT BELOW - Finished with dirb scan for " + ip_address + bcolors.ENDC
@@ -106,7 +108,7 @@ def dirb(ip_address, port, url_start):
 
 def nikto(ip_address, port, url_start):
     print bcolors.HEADER + "INFO: Starting nikto scan for " + ip_address + bcolors.ENDC
-    NIKTOSCAN = "nikto -h %s://%s -C all -o /root/oscp/exam/%s/nikto-%s-%s.txt" % (url_start, ip_address, ip_address, url_start, ip_address)
+    NIKTOSCAN = "nikto -h %s://%s -C all -o /opt/oscp/exam/%s/nikto-%s-%s.txt" % (url_start, ip_address, ip_address, url_start, ip_address)
     print bcolors.HEADER + NIKTOSCAN + bcolors.ENDC
     results_nikto = subprocess.check_output(NIKTOSCAN, shell=True)
     print bcolors.OKGREEN + "INFO: RESULT BELOW - Finished with NIKTO-scan for " + ip_address + bcolors.ENDC
@@ -128,7 +130,7 @@ def httpEnum(ip_address, port):
     print bcolors.HEADER + CURLSCAN + bcolors.END
     curl_results = subprocess.check_output(CURLSCAN, shell=True)
     write_to_file(ip_address, "curl", curl_results)
-    HTTPSCAN = "nmap -sV -Pn -vv -p %s --script=http-vhosts,http-userdir-enum,http-apache-negotiation,http-backup-finder,http-config-backup,http-default-accounts,http-methods,http-method-tamper,http-passwd,http-robots.txt,http-devframework,http-enum,http-frontpage-login,http-git,http-iis-webdav-vuln,http-php-version,http-robots.txt,http-shellshock,http-vuln-cve2015-1635 -oN /root/oscp/exam/%s/%s_http.nmap %s" % (port, ip_address, ip_address, ip_address)
+    HTTPSCAN = "nmap -sV -Pn -vv -p %s --script=http-vhosts,http-userdir-enum,http-apache-negotiation,http-backup-finder,http-config-backup,http-default-accounts,http-methods,http-method-tamper,http-passwd,http-robots.txt,http-devframework,http-enum,http-frontpage-login,http-git,http-iis-webdav-vuln,http-php-version,http-robots.txt,http-shellshock,http-vuln-cve2015-1635 -oN /opt/oscp/exam/%s/%s_http.nmap %s" % (port, ip_address, ip_address, ip_address)
     print bcolors.HEADER + HTTPSCAN + bcolors.ENDC
 
     http_results = subprocess.check_output(HTTPSCAN, shell=True)
@@ -147,12 +149,12 @@ def httpsEnum(ip_address, port):
     nikto_process = multiprocessing.Process(target=nikto, args=(ip_address,port,"https"))
     nikto_process.start()
 
-    SSLSCAN = "sslscan %s:%s >> /root/oscp/exam/%s/ssl_scan_%s" % (ip_address, port, ip_address, ip_address)
+    SSLSCAN = "sslscan %s:%s >> /opt/oscp/exam/%s/ssl_scan_%s" % (ip_address, port, ip_address, ip_address)
     print bcolors.HEADER + SSLSCAN + bcolors.ENDC
     ssl_results = subprocess.check_output(SSLSCAN, shell=True)
     print bcolors.OKGREEN + "INFO: CHECK FILE - Finished with SSLSCAN for " + ip_address + bcolors.ENDC
 
-    HTTPSCANS = "nmap -sV -Pn -vv -p %s --script=http-vhosts,http-userdir-enum,http-apache-negotiation,http-backup-finder,http-config-backup,http-default-accounts,http-methods,http-method-tamper,http-passwd,http-robots.txt,http-devframework,http-enum,http-frontpage-login,http-git,http-iis-webdav-vuln,http-php-version,http-robots.txt,http-shellshock,http-vuln-cve2015-1635 -oN /root/oscp/exam/%s/%s_http.nmap %s" % (port, ip_address, ip_address, ip_address)
+    HTTPSCANS = "nmap -sV -Pn -vv -p %s --script=http-vhosts,http-userdir-enum,http-apache-negotiation,http-backup-finder,http-config-backup,http-default-accounts,http-methods,http-method-tamper,http-passwd,http-robots.txt,http-devframework,http-enum,http-frontpage-login,http-git,http-iis-webdav-vuln,http-php-version,http-robots.txt,http-shellshock,http-vuln-cve2015-1635 -oN /opt/oscp/exam/%s/%s_http.nmap %s" % (port, ip_address, ip_address, ip_address)
     print bcolors.HEADER + HTTPSCANS + bcolors.ENDC
     https_results = subprocess.check_output(HTTPSCANS, shell=True)
     print bcolors.OKGREEN + "INFO: RESULT BELOW - Finished with HTTPS-scan for " + ip_address + bcolors.ENDC
@@ -162,7 +164,7 @@ def httpsEnum(ip_address, port):
 def mssqlEnum(ip_address, port):
     print bcolors.HEADER + "INFO: Detected MS-SQL on " + ip_address + ":" + port + bcolors.ENDC
     print bcolors.HEADER + "INFO: Performing nmap mssql script scan for " + ip_address + ":" + port + bcolors.ENDC
-    MSSQLSCAN = "nmap -sV -Pn -p %s --script=ms-sql-info,ms-sql-config,ms-sql-dump-hashes --script-args=mssql.instance-port=1433,smsql.username-sa,mssql.password-sa -oN /root/oscp/exam/%s/mssql_%s.nmap %s" % (port, ip_address, ip_address)
+    MSSQLSCAN = "nmap -sV -Pn -p %s --script=ms-sql-info,ms-sql-config,ms-sql-dump-hashes --script-args=mssql.instance-port=1433,smsql.username-sa,mssql.password-sa -oN /opt/oscp/exam/%s/mssql_%s.nmap %s" % (port, ip_address, ip_address)
     print bcolors.HEADER + MSSQLSCAN + bcolors.ENDC
     mssql_results = subprocess.check_output(MSSQLSCAN, shell=True)
     print bcolors.OKGREEN + "INFO: RESULT BELOW - Finished with MSSQL-scan for " + ip_address + bcolors.ENDC
@@ -173,7 +175,7 @@ def mssqlEnum(ip_address, port):
 def smtpEnum(ip_address, port):
     print bcolors.HEADER + "INFO: Detected smtp on " + ip_address + ":" + port  + bcolors.ENDC
     connect_to_port(ip_address, port, "smtp")
-    SMTPSCAN = "nmap -sV -Pn -p %s --script=smtp-commands,smtp-enum-users,smtp-vuln-cve2010-4344,smtp-vuln-cve2011-1720,smtp-vuln-cve2011-1764 %s -oN /root/oscp/exam/%s/smtp_%s.nmap" % (port, ip_address, ip_address, ip_address)
+    SMTPSCAN = "nmap -sV -Pn -p %s --script=smtp-commands,smtp-enum-users,smtp-vuln-cve2010-4344,smtp-vuln-cve2011-1720,smtp-vuln-cve2011-1764 %s -oN /opt/oscp/exam/%s/smtp_%s.nmap" % (port, ip_address, ip_address, ip_address)
     print bcolors.HEADER + SMTPSCAN + bcolors.ENDC
     smtp_results = subprocess.check_output(SMTPSCAN, shell=True)
     print bcolors.OKGREEN + "INFO: RESULT BELOW - Finished with SMTP-scan for " + ip_address + bcolors.ENDC
@@ -183,7 +185,7 @@ def smtpEnum(ip_address, port):
 
 def smbNmap(ip_address, port):
     print "INFO: Detected SMB on " + ip_address + ":" + port
-    smbNmap = "nmap --script=smb-enum-shares.nse,smb-ls.nse,smb-enum-users.nse,smb-mbenum.nse,smb-os-discovery.nse,smb-security-mode.nse,smbv2-enabled.nse,smb-vuln-cve2009-3103.nse,smb-vuln-ms06-025.nse,smb-vuln-ms07-029.nse,smb-vuln-ms08-067.nse,smb-vuln-ms10-054.nse,smb-vuln-ms10-061.nse,smb-vuln-regsvc-dos.nse,smbv2-enabled.nse %s -oN /root/oscp/exam/%s/smb_%s.nmap" % (ip_address, ip_address, ip_address)
+    smbNmap = "nmap --script=smb-enum-shares.nse,smb-ls.nse,smb-enum-users.nse,smb-mbenum.nse,smb-os-discovery.nse,smb-security-mode.nse,smbv2-enabled.nse,smb-vuln-cve2009-3103.nse,smb-vuln-ms06-025.nse,smb-vuln-ms07-029.nse,smb-vuln-ms08-067.nse,smb-vuln-ms10-054.nse,smb-vuln-ms10-061.nse,smb-vuln-regsvc-dos.nse,smbv2-enabled.nse %s -oN /opt/oscp/exam/%s/smb_%s.nmap" % (ip_address, ip_address, ip_address)
     smbNmap_results = subprocess.check_output(smbNmap, shell=True)
     print bcolors.OKGREEN + "INFO: RESULT BELOW - Finished with SMB-Nmap-scan for " + ip_address + bcolors.ENDC
     print smbNmap_results
@@ -191,7 +193,7 @@ def smbNmap(ip_address, port):
 
 def smbEnum(ip_address, port):
     print "INFO: Detected SMB on " + ip_address + ":" + port
-    enum4linux = "enum4linux -a %s > /root/oscp/exam/%s/enum4linux_%s" % (ip_address, ip_address, ip_address)
+    enum4linux = "enum4linux -a %s > /opt/oscp/exam/%s/enum4linux_%s" % (ip_address, ip_address, ip_address)
     enum4linux_results = subprocess.check_output(enum4linux, shell=True)
     print bcolors.OKGREEN + "INFO: CHECK FILE - Finished with ENUM4LINUX-Nmap-scan for " + ip_address + bcolors.ENDC
     print enum4linux_results
@@ -200,7 +202,7 @@ def smbEnum(ip_address, port):
 def ftpEnum(ip_address, port):
     print bcolors.HEADER + "INFO: Detected ftp on " + ip_address + ":" + port  + bcolors.ENDC
     connect_to_port(ip_address, port, "ftp")
-    FTPSCAN = "nmap -sV -Pn -vv -p %s --script=ftp-anon,ftp-bounce,ftp-libopie,ftp-proftpd-backdoor,ftp-vsftpd-backdoor,ftp-vuln-cve2010-4221 -oN '/root/oscp/exam/%s/ftp_%s.nmap' %s" % (port, ip_address, ip_address, ip_address)
+    FTPSCAN = "nmap -sV -Pn -vv -p %s --script=ftp-anon,ftp-bounce,ftp-libopie,ftp-proftpd-backdoor,ftp-vsftpd-backdoor,ftp-vuln-cve2010-4221 -oN '/opt/oscp/exam/%s/ftp_%s.nmap' %s" % (port, ip_address, ip_address, ip_address)
     print bcolors.HEADER + FTPSCAN + bcolors.ENDC
     results_ftp = subprocess.check_output(FTPSCAN, shell=True)
     print bcolors.OKGREEN + "INFO: RESULT BELOW - Finished with ENUM4LINUX-Nmap-scan for " + ip_address + bcolors.ENDC
@@ -209,13 +211,13 @@ def ftpEnum(ip_address, port):
 
 def udpScan(ip_address):
     print bcolors.HEADER + "INFO: Detected UDP on " + ip_address + bcolors.ENDC
-    UDPSCAN = "nmap -vv -Pn -A -sC -sU -T 4 --top-ports 200 -oN '/root/oscp/exam/%s/udp_%s.nmap' %s"  % (ip_address, ip_address, ip_address)
+    UDPSCAN = "nmap -vv -Pn -A -sC -sU -T 4 --top-ports 200 -oN '/opt/oscp/exam/%s/udp_%s.nmap' %s"  % (ip_address, ip_address, ip_address)
     print bcolors.HEADER + UDPSCAN + bcolors.ENDC
     udpscan_results = subprocess.check_output(UDPSCAN, shell=True)
     print bcolors.OKGREEN + "INFO: RESULT BELOW - Finished with UDP-Nmap scan for " + ip_address + bcolors.ENDC
     print udpscan_results
-    UNICORNSCAN = "unicornscan -mU -v -I %s > /root/oscp/exam/%s/unicorn_udp_%s.txt" % (ip_address, ip_address, ip_address)
-    unicornscan_results = subprocess.check_output(UNICORNSCAN, shell=True)
+    UNICORNSCAN = "unicornscan -mU -v -I %s > /opt/oscp/exam/%s/unicorn_udp_%s.txt" % (ip_address, ip_address, ip_address)
+    #unicornscan_results = subprocess.check_output(UNICORNSCAN, shell=True)
     print bcolors.OKGREEN + "INFO: CHECK FILE - Finished with UNICORNSCAN for " + ip_address + bcolors.ENDC
 
 
@@ -232,7 +234,8 @@ def nmapScan(ip_address):
     print bcolors.OKGREEN + "INFO: Running general TCP/UDP nmap scans for " + ip_address + bcolors.ENDC
 
 
-    TCPSCAN = "nmap -sV -p- -O %s -oN '/root/oscp/exam/%s/%s.nmap'"  % (ip_address, ip_address, ip_address)
+    ports = '-p-' if full_scan else ''
+    TCPSCAN = "nmap -vvv -sV {1} -O {0} -oN '/opt/oscp/exam/{0}/{0}.nmap'".format(ip_address, ports)
     print bcolors.HEADER + TCPSCAN + bcolors.ENDC
     results = subprocess.check_output(TCPSCAN, shell=True)
     print bcolors.OKGREEN + "INFO: RESULT BELOW - Finished with BASIC Nmap-scan for " + ip_address + bcolors.ENDC
@@ -331,25 +334,35 @@ if len(sys.argv) < 2:
 print bcolors.ENDC
 
 if __name__=='__main__':
-
     # Setting ip targets
-    targets = sys.argv
-    targets.pop(0)
+    print("UDP scan is disabled. install unidings")
+    if sys.argv[1] == 'full':
+        print("Running full scan with -p-")
+        full_scan = True
+        sys.argv.pop(0)
+    else:
+        full_scan = False
+        print("Not running the full scan")
+    targets = sys.argv[1:]
+    if os.geteuid() != 0:
+       print "not running as root"
+       sys.exit(1)
 
-    dirs = os.listdir("/root/oscp/exam")
+    dirs = os.listdir("/opt/oscp/exam")
+    print(targets)
     for scanip in targets:
         scanip = scanip.rstrip()
         if not scanip in dirs:
             print bcolors.HEADER + "INFO: No folder was found for " + scanip + ". Setting up folder." + bcolors.ENDC
-            subprocess.check_output("mkdir /root/oscp/exam/" + scanip, shell=True)
-            subprocess.check_output("mkdir /root/oscp/exam/" + scanip + "/exploits", shell=True)
-            subprocess.check_output("mkdir /root/oscp/exam/" + scanip + "/privesc", shell=True)
-            print bcolors.OKGREEN + "INFO: Folder created here: " + "/root/oscp/exam/" + scanip + bcolors.ENDC
-            subprocess.check_output("cp /root/oscp/reports/windows-template.md /root/oscp/exam/" + scanip + "/mapping-windows.md", shell=True)
-            subprocess.check_output("cp /root/oscp/reports/linux-template.md /root/oscp/exam/" + scanip + "/mapping-linux.md", shell=True)
-            print bcolors.OKGREEN + "INFO: Added pentesting templates: " + "/root/oscp/exam/" + scanip + bcolors.ENDC
-            subprocess.check_output("sed -i -e 's/INSERTIPADDRESS/" + scanip + "/g' /root/oscp/exam/" + scanip + "/mapping-windows.md", shell=True)
-            subprocess.check_output("sed -i -e 's/INSERTIPADDRESS/" + scanip + "/g' /root/oscp/exam/" + scanip + "/mapping-linux.md", shell=True)
+            subprocess.check_output("mkdir /opt/oscp/exam/" + scanip, shell=True)
+            subprocess.check_output("mkdir /opt/oscp/exam/" + scanip + "/exploits", shell=True)
+            subprocess.check_output("mkdir /opt/oscp/exam/" + scanip + "/privesc", shell=True)
+            print bcolors.OKGREEN + "INFO: Folder created here: " + "/opt/oscp/exam/" + scanip + bcolors.ENDC
+            subprocess.check_output("cp /opt/oscp/reports/windows-template.md /opt/oscp/exam/" + scanip + "/mapping-windows.md", shell=True)
+            subprocess.check_output("cp /opt/oscp/reports/linux-template.md /opt/oscp/exam/" + scanip + "/mapping-linux.md", shell=True)
+            print bcolors.OKGREEN + "INFO: Added pentesting templates: " + "/opt/oscp/exam/" + scanip + bcolors.ENDC
+            subprocess.check_output("sed -i -e 's/INSERTIPADDRESS/" + scanip + "/g' /opt/oscp/exam/" + scanip + "/mapping-windows.md", shell=True)
+            subprocess.check_output("sed -i -e 's/INSERTIPADDRESS/" + scanip + "/g' /opt/oscp/exam/" + scanip + "/mapping-linux.md", shell=True)
 
 
 
